@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Карта изображения</title>
+    <style>
+        .container {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+        }
+        .image-container {
+            flex: 1;
+            position: relative;
+        }
+        .clicks-container {
+            flex: 1;
+            border: 1px solid #ccc;
+            padding: 15px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .click-item {
+            padding: 8px;
+            margin: 5px 0;
+            background: #f5f5f5;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .click-info {
+            flex: 1;
+        }
+        .delete-btn {
+            background: #ff4444;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            padding: 3px 8px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .delete-btn:hover {
+            background: #cc0000;
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid #ddd;
+        }
+        .marker {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: red;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 3px rgba(0,0,0,0.5);
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="image-container" id="imageContainer">
+            <img src="photo_2025-12-12_16-46-20.jpg" usemap="#image-map" alt="Изображение автомобиля">
+            
+            <map name="image-map">
+                <area target="_blank" alt="Капот передний" title="Капот передний" href="javascript:void(0)" coords="181,260,300,236,277,308,283,353,302,391,186,363,171,315" shape="poly">
+                <area target="_blank" alt="Стекло переднее" title="Стекло переднее" href="javascript:void(0)" coords="316,244,366,258,369,363,314,382,299,311" shape="poly">
+                <area target="_blank" alt="Крыша" title="Крыша" href="javascript:void(0)" coords="381,261,510,262,512,359,380,364" shape="poly">
+                <area target="_blank" alt="Стекло задние" title="Стекло задние" href="javascript:void(0)" coords="533,257,605,251,625,309,608,372,533,366" shape="poly">
+            </map>
+        </div>
+        
+        <div class="clicks-container">
+            <h3>История кликов:</h3>
+            <div id="clicksList"></div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const clicksList = document.getElementById('clicksList');
+            const imageContainer = document.getElementById('imageContainer');
+            const areas = document.querySelectorAll('area');
+            let clickCounter = 0;
+            const clickMarkers = {};
+            
+            areas.forEach(area => {
+                area.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const img = document.querySelector('img');
+                    const rect = img.getBoundingClientRect();
+                    const coords = area.coords.split(',');
+                    
+                    let sumX = 0, sumY = 0, count = 0;
+                    for (let i = 0; i < coords.length; i += 2) {
+                        sumX += parseInt(coords[i]);
+                        sumY += parseInt(coords[i+1]);
+                        count++;
+                    }
+                    const centerX = sumX / count;
+                    const centerY = sumY / count;
+                    
+                    const id = `click-${clickCounter++}`;
+                    addClickItem(this.title, this.alt, id, centerX, centerY);
+                });
+            });
+            
+            function addClickItem(title, alt, id, centerX, centerY) {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('ru-RU', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                
+                const item = document.createElement('div');
+                item.className = 'click-item';
+                item.id = id;
+                item.innerHTML = `
+                    <div class="click-info">
+                        <strong>${title}</strong><br>
+                        <small>ID: ${alt}</small><br>
+                        <small>Время: ${timeString}</small>
+                    </div>
+                    <button class="delete-btn" onclick="deleteClick('${id}')">✕</button>
+                `;
+                
+                clicksList.insertBefore(item, clicksList.firstChild);
+                
+                if (clicksList.children.length > 20) {
+                    const oldest = clicksList.lastChild;
+                    deleteClick(oldest.id);
+                }
+                
+                createMarker(id, centerX, centerY);
+            }
+            
+            function createMarker(id, x, y) {
+                const marker = document.createElement('div');
+                marker.className = 'marker';
+                marker.id = `marker-${id}`;
+                
+                const img = document.querySelector('img');
+                const rect = img.getBoundingClientRect();
+                const imgWidth = img.naturalWidth || rect.width;
+                const imgHeight = img.naturalHeight || rect.height;
+                
+                const leftPercent = (x / imgWidth) * 100;
+                const topPercent = (y / imgHeight) * 100;
+                
+                marker.style.left = `${leftPercent}%`;
+                marker.style.top = `${topPercent}%`;
+                
+                imageContainer.appendChild(marker);
+                clickMarkers[id] = marker;
+            }
+            
+            window.deleteClick = function(id) {
+                const item = document.getElementById(id);
+                if (item) {
+                    item.remove();
+                }
+                
+                const marker = clickMarkers[id];
+                if (marker) {
+                    marker.remove();
+                    delete clickMarkers[id];
+                }
+            };
+        });
+    </script>
+</body>
+</html>
